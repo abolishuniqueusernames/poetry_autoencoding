@@ -60,10 +60,12 @@
 ### Context for Next Session - ENHANCED DATASET READY
 **MAJOR BREAKTHROUGH**: Web-scraper-debugger agent delivered 6.7× improvement in success rate with premium alt-lit collection. All preparatory work complete! Environment validated, enhanced dataset ready with 67% scraper success rate, educational framework built. Ready for core GLoVe preprocessing exercises and RNN autoencoder implementation with high-quality training data.
 
-### Files Ready for ML Work - ENHANCED
-- `glove_preprocessing_tutorial.ipynb` - educational exercises 1-12, ready for enhanced dataset
-- `zipf_vocabulary_analysis.py` - principled vocabulary selection
+### Files Ready for ML Work - ORGANIZED WORKSPACE  
+- `analysis/glove_preprocessing_tutorial.ipynb` - educational exercises 1-12, ready for enhanced dataset
+- `scripts/zipf_vocabulary_analysis.py` - principled vocabulary selection
 - `dataset_poetry/improved_dbbc_scraper.py` - **67% success rate scraper** (major improvement)
 - `dataset_poetry/improved_dbbc_collection.json` - **Premium alt-lit dataset** (20 poems, avg score 23.6)
 - `dataset_poetry/improved_dbbc_collection_training.txt` - **Neural network training format** ready
+- `scripts/tabula_rasa.py` - Clean slate testing for reproducibility
+- `README.md` - **Complete workspace organization** and quick start guide
 - Enhanced poetry dataset ready for GLoVe embedding analysis and RNN autoencoder training
