@@ -85,11 +85,12 @@
 3. **Sequence Padding**: Dynamic padding within batches
 4. **Normalization**: Embedding normalization for stability
 
-### Dataset Split Strategy  
-- **Training**: 80% of 264 poems (~211 poems)
-- **Validation**: 15% (~40 poems) 
-- **Test**: 5% (~13 poems)
-- **Cross-validation**: Consider for final evaluation
+### Dataset Split Strategy - ENHANCED DATASET  
+- **Training**: 80% of 20 premium poems (~16 poems)
+- **Validation**: 15% (~3 poems) 
+- **Test**: 5% (~1 poem)
+- **Cross-validation**: K-fold validation essential due to smaller premium dataset
+- **Data Augmentation**: Consider paraphrasing/style transfer for training set expansion
 
 ## Validation & Testing
 
@@ -106,4 +107,24 @@
 
 ---
 
-*Note: Implementation details will be updated as development progresses and hardware testing reveals optimal configurations.*
+## Enhanced Dataset Architecture Decisions - August 11, 2025
+
+### Web Scraper Enhancement Results
+- **Architecture**: Web-scraper-debugger agent delivered Requests+BeautifulSoup solution  
+- **Success Rate**: 67% (6.7× improvement from ~10% baseline)
+- **Quality Focus**: Premium curation over volume - average alt-lit score 23.6
+- **Unicode Preservation**: Critical for alt-lit aesthetic maintained through enhanced content detection
+
+### Dataset Quality Implications
+- **Training Strategy**: High-quality examples should improve autoencoder convergence
+- **Effective Dimensionality**: Premium alt-lit vocabulary may show clearer dimensionality structure
+- **Curriculum Learning**: Quality consistency enables better sequence length progression
+- **Evaluation**: Authentic alt-lit characteristics provide better reconstruction quality metrics
+
+### Technical Architecture Updates
+- **Data Format**: Enhanced JSON structure with aesthetic scoring metadata
+- **Content Detection**: DBBC-specific validation optimized for contemporary poetry characteristics
+- **Training Format**: `<POEM_START>`/`<POEM_END>` tokens with preserved Unicode decorative elements
+- **Quality Metrics**: Alt-lit aesthetic scoring system (8-41 range) for training prioritization
+
+*Note: Implementation details updated based on enhanced dataset creation. Premium quality collection enables focused RNN autoencoder training with authentic alt-lit characteristics.*

@@ -151,7 +151,7 @@ if __name__ == "__main__":
     print("Merging poetry datasets...")
     
     stats = merge_poetry_datasets(
-        'dataset_poetry/dbbc_poetry_collection.json',
+        'dataset_poetry/improved_dbbc_collection.json',
         'dataset_poetry/expanded_contemporary_poetry.json', 
         'dataset_poetry/merged_poetry_collection.json'
     )

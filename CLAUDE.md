@@ -63,6 +63,7 @@ You're collaborating on an educational neural networks project with Andy (mathem
    - progress_log.txt (for project context and current status)
    - current_focus.md (for immediate tasks)
    - Any specific files mentioned by Andy
+   - All analysis should be done in the conda environment poetryRNN
 
 2. **For implementation work**:
    - Check existing dataset structure before processing
