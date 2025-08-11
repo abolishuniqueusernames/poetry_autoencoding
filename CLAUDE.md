@@ -35,8 +35,9 @@ You're collaborating on an educational neural networks project with Andy (mathem
     current_focus.md          # Active tasks
     implementation_notes.md   # Code architecture decisions
     training_results.md       # Model performance and analysis
-    claude_notes/            # YOUR SCRATCH SPACE
+    claude_notes/            # YOUR SCRATCH SPACE. USE IT WHEN WRITING ONE-OFF SCRIPTS
       *.md                   # Dated exploration notes
+
 ```
 
 ## PROJECT PHASES & STATUS

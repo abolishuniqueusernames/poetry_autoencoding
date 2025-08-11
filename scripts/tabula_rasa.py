@@ -19,7 +19,7 @@ def confirm_deletion(file_path, dry_run=False):
     response = input(f"Delete {file_path}? (y/N): ")
     return response.lower() in ['y', 'yes']
 
-def find_files_to_delete(data_dir="/data"):
+def find_files_to_delete(data_dir="/dataset_poetry"):
     """
     Find files matching deletion criteria:
     - Audit logs (*.log, *audit*, *log*)
@@ -64,7 +64,7 @@ def find_files_to_delete(data_dir="/data"):
     
     return files_to_delete
 
-def tabula_rasa(data_dir="/data", dry_run=False, force=False, interactive=True):
+def tabula_rasa(data_dir="/dataset_poetry", dry_run=False, force=False, interactive=True):
     """
     Main cleanup function with safety checks
     
