@@ -479,18 +479,18 @@ class AltLitPoetryScraper:
         """Save collection with metadata"""
         
         # Full JSON with metadata
-        with open(f"{filename}.json", 'w', encoding='utf-8') as f:
+        with open(f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename}.json", 'w', encoding='utf-8') as f:
             json.dump(poems, f, indent=2, ensure_ascii=False)
         
         # Training format for neural networks
-        with open(f"{filename}_training.txt", 'w', encoding='utf-8') as f:
+        with open(f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename}_training.txt", 'w', encoding='utf-8') as f:
             for poem in poems:
                 f.write("<POEM_START>\n")
                 f.write(poem['text'])
                 f.write("\n<POEM_END>\n\n")
         
         # Readable format
-        with open(f"{filename}_readable.txt", 'w', encoding='utf-8') as f:
+        with open(f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename}_readable.txt", 'w', encoding='utf-8') as f:
             for poem in poems:
                 f.write(f"=== {poem['title']} ===\n")
                 f.write(f"Source: {poem['source']}\n")

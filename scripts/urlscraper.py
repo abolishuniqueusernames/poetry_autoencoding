@@ -46,7 +46,7 @@ def extract_hyperlinks(url: str, name: str, timeout: int = 10) -> List[str]:
             links.append(full_url)
 
     print(f"Found {len(links)} links. Writing to file")
-    with open(f"hyperlinks_{name}_readable.txt", 'w', encoding='utf-8') as f:
+    with open(f"/home/tgfm/workflows/autoencoder/dataset_poetry/hyperlinks_{name}_readable.txt", 'w', encoding='utf-8') as f:
         for link in links:
             f.write(f"\'{link}\',\n")
     

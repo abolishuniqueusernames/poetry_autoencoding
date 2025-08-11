@@ -11,7 +11,6 @@ import requests
 import random
 from bs4 import BeautifulSoup
 import sys
-import os
 
 class MultiPoemDBBCScraper:
     def __init__(self, debug=False):
@@ -419,165 +418,6 @@ class MultiPoemDBBCScraper:
             print(f"  ✗ Error: {e}")
             return False
     
-    def get_dbbc_urls(self):
-        """Get comprehensive list of DBBC author URLs"""
-        return [
-            'https://www.dreamboybook.club/abby-romine',
-            'https://www.dreamboybook.club/sahaj-kaur',
-            'https://www.dreamboybook.club/ashley-d-escobar',
-            'https://www.dreamboybook.club/natalie-gilda',
-            'https://www.dreamboybook.club/caleb-f-stocco',
-            'https://www.dreamboybook.club/nestan-nikouradze',
-            'https://www.dreamboybook.club/emma-newman-holden',
-            'https://www.dreamboybook.club/stella-parker',
-            'https://www.dreamboybook.club/john-ling',
-            'https://www.dreamboybook.club/lydia-mckimm',
-            'https://www.dreamboybook.club/grace-helen',
-            'https://www.dreamboybook.club/alex-goodale',
-            'https://www.dreamboybook.club/michael-washington',
-            'https://www.dreamboybook.club/madlen-stafford',
-            'https://www.dreamboybook.club/annika-gavlak',
-            'https://www.dreamboybook.club/rae-wayland',
-            'https://www.dreamboybook.club/poppy-cockburn',
-            'https://www.dreamboybook.club/carly-jane-dagen',
-            'https://www.dreamboybook.club/lucia-auerbach',
-            'https://www.dreamboybook.club/ana-palacios',
-            'https://www.dreamboybook.club/jane-dabate',
-            'https://www.dreamboybook.club/david-san-miguel',
-            'https://www.dreamboybook.club/meghan-gunn',
-            'https://www.dreamboybook.club/nora-rose-tomas',
-            'https://www.dreamboybook.club/greta-schledorn',
-            'https://www.dreamboybook.club/sofia-hoefig',
-            'https://www.dreamboybook.club/maria-kirsch',
-            'https://www.dreamboybook.club/luna-sferdianu',
-            'https://www.dreamboybook.club/lillian-mottern',
-            'https://www.dreamboybook.club/paige-greco',
-            'https://www.dreamboybook.club/ana-carrete',
-            'https://www.dreamboybook.club/jaime-barash',
-            'https://www.dreamboybook.club/sophie-knox-peters',
-            'https://www.dreamboybook.club/matthew-tyler-vorce',
-            'https://www.dreamboybook.club/luce-childs',
-            'https://www.dreamboybook.club/taryn-segal',
-            'https://www.dreamboybook.club/valley-r-lee',
-            'https://www.dreamboybook.club/melissa-aliz',
-            'https://www.dreamboybook.club/eva-cat-kuhn',
-            'https://www.dreamboybook.club/madison-nash',
-            'https://www.dreamboybook.club/kd-sims',
-            'https://www.dreamboybook.club/kaia-polanska-richardson',
-            'https://www.dreamboybook.club/laura-mota-juang',
-            'https://www.dreamboybook.club/ashliene-mcmenamy',
-            'https://www.dreamboybook.club/ophelia-arc',
-            'https://www.dreamboybook.club/allison-billmeyer',
-            'https://www.dreamboybook.club/sophia-tempest',
-            'https://www.dreamboybook.club/aurora-bodenhamer',
-            'https://www.dreamboybook.club/lauren-milici',
-            'https://www.dreamboybook.club/izzy-capulong',
-            'https://www.dreamboybook.club/jade-wootton',
-            'https://www.dreamboybook.club/sophie-gillet',
-            'https://www.dreamboybook.club/jason-salvant',
-            'https://www.dreamboybook.club/bambi-fields',
-            'https://www.dreamboybook.club/luc-m',
-            'https://www.dreamboybook.club/a-r-strain',
-            'https://www.dreamboybook.club/adam-harb',
-            'https://www.dreamboybook.club/melanie-robinson',
-            'https://www.dreamboybook.club/samantha-sewell',
-            'https://www.dreamboybook.club/emily-cox',
-            'https://www.dreamboybook.club/danielle-altman',
-            'https://www.dreamboybook.club/jack-ludkey',
-            'https://www.dreamboybook.club/reilly-tuesday',
-            'https://www.dreamboybook.club/maanasa',
-            'https://www.dreamboybook.club/filip-fufezan',
-            'https://www.dreamboybook.club/kate-durbin',
-            'https://www.dreamboybook.club/charlotte-loesch',
-            'https://www.dreamboybook.club/rebecca-hochman-fisher',
-            'https://www.dreamboybook.club/kat-thanopoulos',
-            'https://www.dreamboybook.club/lilly-hogan',
-            'https://www.dreamboybook.club/chayton-pabich-danyla',
-            'https://www.dreamboybook.club/naomi-leigh',
-            'https://www.dreamboybook.club/liam-serwin',
-            'https://www.dreamboybook.club/fiona-flynn',
-            'https://www.dreamboybook.club/sean-avery-medlin',
-            'https://www.dreamboybook.club/farah-abouzeid',
-            'https://www.dreamboybook.club/olivia-kamer',
-            'https://www.dreamboybook.club/nina-potischman',
-            'https://www.dreamboybook.club/katie-friedman',
-            'https://www.dreamboybook.club/ulyses-razo',
-            'https://www.dreamboybook.club/casper-kelly',
-            'https://www.dreamboybook.club/emily-robinson',
-            'https://www.dreamboybook.club/annie-lou-martin',
-            'https://www.dreamboybook.club/alexandra-naughton',
-            'https://www.dreamboybook.club/stephanie-yue-duhem',
-            'https://www.dreamboybook.club/clarke-e-andros',
-            'https://www.dreamboybook.club/nate-waggoner',
-            'https://www.dreamboybook.club/lemmy-yaakova',
-            'https://www.dreamboybook.club/emily-leibert',
-            'https://www.dreamboybook.club/maya-osep',
-            'https://www.dreamboybook.club/claire-benedicta-mclaughlin',
-            'https://www.dreamboybook.club/ruby-elliott-zuckerman',
-            'https://www.dreamboybook.club/caroline-ouellette',
-            'https://www.dreamboybook.club/heart-white',
-            'https://www.dreamboybook.club/peyton-gatewood',
-            'https://www.dreamboybook.club/lindsey-goodrow',
-            'https://www.dreamboybook.club/lotte-latham',
-            'https://www.dreamboybook.club/chelsea-becker',
-            'https://www.dreamboybook.club/jerusha-crone',
-            'https://www.dreamboybook.club/parker-love-bowling',
-            'https://www.dreamboybook.club/sarah-elda',
-            'https://www.dreamboybook.club/claudia-elena-rodriguez',
-            'https://www.dreamboybook.club/isabelle-joy-stephen',
-            'https://www.dreamboybook.club/kate-nerone',
-            'https://www.dreamboybook.club/lana-valdez',
-            'https://www.dreamboybook.club/nicholas-wilder-forman',
-            'https://www.dreamboybook.club/matthew-ciazza',
-            'https://www.dreamboybook.club/carmen-vega',
-            'https://www.dreamboybook.club/cora-lee',
-            'https://www.dreamboybook.club/sophia-howells',
-            'https://www.dreamboybook.club/rowan-bennetti',
-            'https://www.dreamboybook.club/ember-knight',
-            'https://www.dreamboybook.club/ashla-c-r',
-            'https://www.dreamboybook.club/cullen-arbaugh',
-            'https://www.dreamboybook.club/calla-selicious',
-            'https://www.dreamboybook.club/nicola-maye-goldberg',
-            'https://www.dreamboybook.club/benin-gardner',
-            'https://www.dreamboybook.club/mila-rae-mancuso',
-            'https://www.dreamboybook.club/alex-here',
-            'https://www.dreamboybook.club/olivia-zarzycki',
-            'https://www.dreamboybook.club/mariana-rodriguez',
-            'https://www.dreamboybook.club/bronwen-lam',
-            'https://www.dreamboybook.club/joyce-safdiah',
-            'https://www.dreamboybook.club/swan-scissors',
-            'https://www.dreamboybook.club/frank-demma',
-            'https://www.dreamboybook.club/juliette-jeffers',
-            'https://www.dreamboybook.club/josh-rodriguez',
-            'https://www.dreamboybook.club/jessica-abughattas',
-            'https://www.dreamboybook.club/marianne-agnes',
-            'https://www.dreamboybook.club/katja-grober',
-            'https://www.dreamboybook.club/joshua-bohnsack',
-            'https://www.dreamboybook.club/nastasia-koulich',
-            'https://www.dreamboybook.club/alisa-christiane-otte',
-            'https://www.dreamboybook.club/ayla-mccarthy-combes'
-        ]
-
-    def scrape_all_dbbc_pages(self, limit=None):
-        """Scrape all DBBC author pages with multi-poem handling"""
-        urls = self.get_dbbc_urls()
-        if limit:
-            urls = urls[:limit]
-        
-        print(f"\n=== MULTI-POEM DBBC SCRAPER - {len(urls)} AUTHOR PAGES ===\n")
-        
-        for i, url in enumerate(urls, 1):
-            print(f"[{i}/{len(urls)}] Scraping: {url}")
-            
-            # Respectful delay
-            if i > 1:
-                delay = random.uniform(2, 4)
-                time.sleep(delay)
-            
-            self.scrape_url(url)
-        
-        return self.poems_collected
-
     def test_problematic_urls(self):
         """Test on the problematic URLs"""
         test_urls = [
@@ -609,123 +449,32 @@ class MultiPoemDBBCScraper:
                 print(f"  - {poem['author']}: \"{poem['title'][:30]}...\" ({poem['line_count']} lines)")
         
         return self.poems_collected
-    
-    def save_results(self, filename_prefix="multi_poem_dbbc_collection"):
-        """Save scraped poems to files"""
-        if not self.poems_collected:
-            print("No poems to save!")
-            return
-        
-        # Sort by DBBC score
-        self.poems_collected.sort(key=lambda p: p['dbbc_score'], reverse=True)
-        
-        # Save as JSON
-        json_file = f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename_prefix}.json"
-        with open(json_file, 'w', encoding='utf-8') as f:
-            json.dump(self.poems_collected, f, indent=2, ensure_ascii=False)
-        
-        # Save training format
-        training_file = f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename_prefix}_training.txt"
-        with open(training_file, 'w', encoding='utf-8') as f:
-            for poem in self.poems_collected:
-                f.write("<POEM_START>\n")
-                f.write(poem['text'])
-                f.write("\n<POEM_END>\n\n")
-        
-        # Save readable format
-        readable_file = f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename_prefix}_readable.txt"
-        with open(readable_file, 'w', encoding='utf-8') as f:
-            f.write("=== MULTI-POEM DBBC POETRY COLLECTION ===\n")
-            f.write(f"Total poems: {len(self.poems_collected)}\n")
-            f.write(f"Failed URLs: {len(self.failed_urls)}\n")
-            f.write(f"Skipped URLs: {len(self.skipped_urls)}\n")
-            f.write(f"Success rate: {len(self.poems_collected) / (len(self.poems_collected) + len(self.failed_urls)) * 100:.1f}%\n\n")
-            
-            for i, poem in enumerate(self.poems_collected, 1):
-                f.write(f"#{i} - {poem['title']}\n")
-                f.write(f"Author: {poem['author']}\n")
-                f.write(f"DBBC Score: {poem['dbbc_score']}\n")
-                f.write(f"URL: {poem['url']}\n")
-                f.write(f"Length: {poem['length']} chars, {poem['line_count']} lines\n\n")
-                f.write(poem['text'])
-                f.write(f"\n\n{'='*60}\n\n")
-        
-        print(f"\n✓ Collection saved to:")
-        print(f"  - {json_file}")
-        print(f"  - {training_file}")
-        print(f"  - {readable_file}")
-    
-    def print_summary(self):
-        """Print scraping summary"""
-        total_attempts = len(self.poems_collected) + len(self.failed_urls)
-        success_rate = (len(self.poems_collected) / total_attempts * 100) if total_attempts > 0 else 0
-        
-        print("\n" + "="*50)
-        print("SCRAPING SUMMARY")
-        print("="*50)
-        print(f"Total URLs attempted: {total_attempts}")
-        print(f"Successful extractions: {len(self.poems_collected)}")
-        print(f"Failed extractions: {len(self.failed_urls)}")
-        print(f"Skipped URLs: {len(self.skipped_urls)}")
-        print(f"Success rate: {success_rate:.1f}%")
-        
-        if self.poems_collected:
-            scores = [p['dbbc_score'] for p in self.poems_collected]
-            print(f"\nDBBC Aesthetic Scores:")
-            print(f"  Average: {sum(scores) / len(scores):.1f}")
-            print(f"  Min: {min(scores)}")
-            print(f"  Max: {max(scores)}")
-            
-            total_chars = sum(p['length'] for p in self.poems_collected)
-            print(f"\nContent collected:")
-            print(f"  Total characters: {total_chars:,}")
-            print(f"  Average poem length: {total_chars // len(self.poems_collected):,} chars")
-            
-            print(f"\nTop 3 poems by DBBC score:")
-            for i, poem in enumerate(self.poems_collected[:3], 1):
-                print(f"  {i}. \"{poem['title'][:40]}...\" (score: {poem['dbbc_score']})")
-        
-        if self.failed_urls and self.debug:
-            print(f"\nFailed URLs:")
-            for url in self.failed_urls[:10]:
-                print(f"  - {url}")
-            if len(self.failed_urls) > 10:
-                print(f"  ... and {len(self.failed_urls) - 10} more")
 
 
 def main():
-    """Run multi-poem DBBC scraper"""
-    print("🚀 MULTI-POEM DBBC SCRAPER")
-    print("Comprehensive scraping with multi-poem extraction capability\n")
+    """Run multi-poem scraper test"""
+    print("🚀 MULTI-POEM DBBC SCRAPER TEST")
+    print("Testing extraction of multiple poems per page\n")
     
-    # Parse command line arguments
-    debug = '--debug' in sys.argv
-    test_only = '--test' in sys.argv
-    limit = None
-    for arg in sys.argv:
-        if arg.startswith('--limit='):
-            limit = int(arg.split('=')[1])
+    scraper = MultiPoemDBBCScraper(debug='--debug' in sys.argv)
+    poems = scraper.test_problematic_urls()
     
-    scraper = MultiPoemDBBCScraper(debug=debug)
-    
-    if test_only:
-        print("Running test mode on problematic URLs...")
-        poems = scraper.test_problematic_urls()
-        filename_prefix = "multi_poem_test"
-    else:
-        print("Running full website scrape...")
-        poems = scraper.scrape_all_dbbc_pages(limit=limit)
-        filename_prefix = "multi_poem_dbbc_collection"
-    
-    # Print summary
-    scraper.print_summary()
-    
-    # Save results
     if poems:
-        scraper.save_results(filename_prefix)
-        print("\n✅ Scraping complete! Check the output files for your poetry collection.")
+        # Save test results
+        with open('/home/tgfm/workflows/autoencoder/dataset_poetry/multi_poem_test.json', 'w') as f:
+            json.dump(poems, f, indent=2, ensure_ascii=False)
+        
+        with open('/home/tgfm/workflows/autoencoder/dataset_poetry/multi_poem_test.txt', 'w') as f:
+            for i, poem in enumerate(poems, 1):
+                f.write(f"#{i} - {poem['title']}\n")
+                f.write(f"Author: {poem['author']}\n")
+                f.write(f"Score: {poem['dbbc_score']}\n\n")
+                f.write(poem['text'])
+                f.write("\n\n" + "="*60 + "\n\n")
+        
+        print(f"\n✅ Test complete! Saved {len(poems)} poems to multi_poem_test.json/txt")
     else:
-        print("\n❌ No poems were collected. Check the debug output for issues.")
+        print("\n❌ No poems collected in test")
     
     return len(poems)
 

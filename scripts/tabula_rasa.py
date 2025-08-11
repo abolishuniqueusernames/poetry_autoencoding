@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Tabula Rasa - Clean Slate Testing Script
-Safely removes audit logs, PDFs, and test files from /data directory for reproducibility testing.
+Safely removes ALL files from /dataset_poetry directory for fresh data collection.
 """
 
 import os
@@ -19,12 +19,9 @@ def confirm_deletion(file_path, dry_run=False):
     response = input(f"Delete {file_path}? (y/N): ")
     return response.lower() in ['y', 'yes']
 
-def find_files_to_delete(data_dir="/dataset_poetry"):
+def find_files_to_delete(data_dir):
     """
-    Find files matching deletion criteria:
-    - Audit logs (*.log, *audit*, *log*)
-    - PDFs (*.pdf)
-    - Files containing "test" in name
+    Find ALL files in the dataset_poetry directory for complete cleanup
     """
     if not os.path.exists(data_dir):
         print(f"Warning: Directory {data_dir} does not exist")
@@ -33,38 +30,14 @@ def find_files_to_delete(data_dir="/dataset_poetry"):
     files_to_delete = []
     data_path = Path(data_dir)
     
-    # Recursively find matching files
+    # Find ALL files in the directory
     for file_path in data_path.rglob('*'):
         if file_path.is_file():
-            filename = file_path.name.lower()
-            
-            # Check deletion criteria
-            should_delete = False
-            reason = ""
-            
-            # Audit logs
-            if (filename.endswith('.log') or 
-                'audit' in filename or 
-                'log' in filename):
-                should_delete = True
-                reason = "audit/log file"
-            
-            # PDFs
-            elif filename.endswith('.pdf'):
-                should_delete = True
-                reason = "PDF file"
-            
-            # Test files
-            elif 'test' in filename:
-                should_delete = True
-                reason = "test file"
-            
-            if should_delete:
-                files_to_delete.append((file_path, reason))
+            files_to_delete.append((file_path, "dataset file"))
     
     return files_to_delete
 
-def tabula_rasa(data_dir="/dataset_poetry", dry_run=False, force=False, interactive=True):
+def tabula_rasa(data_dir, dry_run=False, force=False, interactive=True):
     """
     Main cleanup function with safety checks
     
@@ -156,8 +129,8 @@ def main():
     )
     parser.add_argument(
         '--data-dir', 
-        default='/data',
-        help='Target directory for cleanup (default: /data)'
+        default='/home/tgfm/workflows/autoencoder/dataset_poetry/',
+        help='Target directory for cleanup (default: /home/tgfm/workflows/autoencoder/dataset_poetry/)'
     )
     parser.add_argument(
         '--dry-run', 

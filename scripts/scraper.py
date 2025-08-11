@@ -60,7 +60,7 @@ class ExpandedContemporaryPoetryScraper:
             print(f"✗ Firefox setup failed: {e}")
             raise
     
-    def random_delay(self, min_delay=0.1, max_delay=0.4):
+    def random_delay(self, min_delay=0.8, max_delay=2.3):
         """Human-like delays"""
         time.sleep(random.uniform(min_delay, max_delay))
 
@@ -450,7 +450,7 @@ class ExpandedContemporaryPoetryScraper:
                     else:
                         print(f"  ✗ No poems found")
                     
-                    self.random_delay(0.2, 0.4)
+                    self.random_delay(1, 2.6)
                     
                 except Exception as e:
                     print(f"  ✗ Error: {e}")
@@ -474,9 +474,9 @@ class ExpandedContemporaryPoetryScraper:
             
             # Human-like scrolling to trigger content
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
-            self.random_delay(0, 0.3)
+            self.random_delay(1, 1.5)
             self.driver.execute_script("window.scrollTo(0, 0);")
-            self.random_delay(0, 0.6)
+            self.random_delay(1, 2)
             
             # Extract content using multiple methods
             poems = []
@@ -849,18 +849,18 @@ class ExpandedContemporaryPoetryScraper:
         """Save the expanded collection"""
         
         # JSON with full metadata
-        with open(f"{filename}.json", 'w', encoding='utf-8') as f:
+        with open(f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename}.json", 'w', encoding='utf-8') as f:
             json.dump(poems, f, indent=2, ensure_ascii=False)
         
         # Training format
-        with open(f"{filename}_training.txt", 'w', encoding='utf-8') as f:
+        with open(f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename}_training.txt", 'w', encoding='utf-8') as f:
             for poem in poems:
                 f.write("<POEM_START>\n")
                 f.write(poem['text'])
                 f.write("\n<POEM_END>\n\n")
         
         # Readable format
-        with open(f"{filename}_readable.txt", 'w', encoding='utf-8') as f:
+        with open(f"/home/tgfm/workflows/autoencoder/dataset_poetry/{filename}_readable.txt", 'w', encoding='utf-8') as f:
             f.write(f"=== EXPANDED CONTEMPORARY POETRY COLLECTION ===\n")
             f.write(f"Total poems: {len(poems)}\n")
             f.write("Sorted by alt-lit score\n\n")
