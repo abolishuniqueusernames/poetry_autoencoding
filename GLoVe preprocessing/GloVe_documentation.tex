@@ -1,0 +1,700 @@
+\documentclass[11pt,a4paper]{article}
+
+% Essential packages
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{longtable}
+
+% Page geometry
+\geometry{margin=1in}
+
+% Color definitions
+\definecolor{nativecolor}{RGB}{0,100,200}
+\definecolor{customcolor}{RGB}{200,100,0}
+
+% Code listing setup
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    backgroundcolor=\color{gray!5},
+    frame=single,
+    breaklines=true,
+    language=Python,
+    showstringspaces=false,
+    tabsize=2,
+    captionpos=b
+}
+
+% Custom boxes for native vs custom functions
+\newtcolorbox{nativebox}[1]{
+  colback=blue!5!white,
+  colframe=nativecolor,
+  fonttitle=\bfseries,
+  title=#1
+}
+
+\newtcolorbox{custombox}[1]{
+  colback=orange!5!white,
+  colframe=customcolor,
+  fonttitle=\bfseries,
+  title=#1
+}
+
+% Document metadata
+\title{GloVe Implementation Programming Documentation}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction and Library Dependencies}
+
+This documentation provides comprehensive technical specifications for implementing the GloVe text processing pipeline using Python libraries. \textbf{The documentation is organized into two distinct categories:}
+
+\begin{enumerate}
+\item \textbf{\textcolor{nativecolor}{NATIVE LIBRARY FUNCTIONS}} - Built-in functions from established libraries (NLTK, spaCy, Gensim, etc.)
+\item \textbf{\textcolor{customcolor}{CUSTOM HELPER FUNCTIONS}} - Implementation examples and utilities written specifically for this pipeline
+\end{enumerate}
+
+Each function is documented with complete syntax, parameter descriptions, return values, usage examples, and performance considerations. The documentation follows the conceptual framework established in the abstract overview, ensuring systematic translation from theory to practice.
+
+\subsection{Required Dependencies and Installation}
+
+\begin{lstlisting}[caption=Required library imports]
+# Core scientific computing
+import numpy as np
+import scipy.sparse
+import scipy.stats
+from scipy.spatial.distance import cosine
+
+# Machine learning and preprocessing
+import sklearn.decomposition
+import sklearn.preprocessing
+import sklearn.metrics.pairwise
+import sklearn.cluster
+import sklearn.manifold
+
+# Natural language processing
+import nltk
+import spacy
+import gensim
+from gensim.models import KeyedVectors
+from gensim.scripts.glove2word2vec import glove2word2vec
+
+# Text processing utilities
+import re
+import string
+import contractions
+from collections import Counter, defaultdict
+import difflib
+
+# Deep learning frameworks
+import torch
+import torch.nn.utils.rnn
+import tensorflow as tf
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Visualization and analysis
+import matplotlib.pyplot as plt
+import plotly.express as px
+import seaborn as sns
+
+# System utilities
+import multiprocessing
+import joblib
+from itertools import groupby, product
+import pickle
+import json
+\end{lstlisting}
+
+\section{Phase I: Corpus Preparation and Tokenization}
+
+\subsection{Text Normalization Functions}
+
+\begin{nativebox}{\texttt{str.lower()} - Native Case Normalization}
+\textbf{Library}: Python built-in \\
+\textbf{Syntax}: \texttt{text.lower()} \\
+\textbf{Parameters}: None \\
+\textbf{Returns}: String with all characters converted to lowercase \\
+\textbf{Memory Complexity}: O(n) where n is string length \\
+\textbf{Time Complexity}: O(n)
+
+\begin{lstlisting}[caption=Direct usage of native function]
+# Direct usage of native function
+text = "Poetry and LITERATURE"
+lowercase_text = text.lower()  # Returns: 'poetry and literature'
+\end{lstlisting}
+\end{nativebox}
+
+\begin{nativebox}{\texttt{str.casefold()} - Native Unicode-Aware Normalization}
+\textbf{Library}: Python built-in \\
+\textbf{Syntax}: \texttt{text.casefold()} \\
+\textbf{Parameters}: None \\
+\textbf{Returns}: String with aggressive case folding for comparisons
+
+\begin{lstlisting}[caption=Unicode-aware normalization]
+# Direct usage of native function
+text = "Café and NAÏVE"
+normalized_text = text.casefold()  # Returns: 'café and naïve'
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom Normalization Helper Functions}
+
+\begin{lstlisting}[caption=Custom case normalization helpers]
+def normalize_case(text):
+    """
+    CUSTOM HELPER: Convert text to lowercase for consistent token matching.
+    
+    Args:
+        text (str): Input text string
+        
+    Returns:
+        str: Lowercase version of input text
+        
+    Example:
+        >>> normalize_case("Poetry and LITERATURE")
+        'poetry and literature'
+    """
+    return text.lower()
+
+def normalize_case_unicode(text):
+    """
+    CUSTOM HELPER: Unicode-aware case normalization using casefold.
+    
+    Args:
+        text (str): Input text with potential unicode characters
+        
+    Returns:
+        str: Normalized text suitable for comparison
+        
+    Example:
+        >>> normalize_case_unicode("Café and NAÏVE")
+        'café and naïve'
+    """
+    return text.casefold()
+\end{lstlisting}
+\end{custombox}
+
+\begin{nativebox}{\texttt{re.sub()} - Native Regular Expression Substitution}
+\textbf{Library}: Python \texttt{re} module \\
+\textbf{Syntax}: \texttt{re.sub(pattern, replacement, string, flags=0)} \\
+\textbf{Parameters}:
+\begin{itemize}
+\item \texttt{pattern}: Regular expression pattern to match
+\item \texttt{replacement}: String or function to replace matches
+\item \texttt{string}: Input string to process
+\item \texttt{flags}: Optional regex flags
+\end{itemize}
+
+\textbf{Returns}: String with pattern matches replaced \\
+\textbf{Time Complexity}: O(n) where n is string length
+
+\begin{lstlisting}[caption=Direct regex usage examples]
+import re
+
+# Direct usage examples
+text = "Hello,world!"
+# Separate punctuation with spaces
+spaced_text = re.sub(r'([.,!?;:])', r' \1 ', text)  # 'Hello , world !'
+# Clean up multiple spaces  
+clean_text = re.sub(r'\s+', ' ', spaced_text)  # 'Hello , world !'
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom Punctuation Processing Functions}
+
+\begin{lstlisting}[caption=Custom punctuation handling functions]
+def separate_punctuation(text):
+    """
+    CUSTOM HELPER: Separate punctuation from adjacent words with spaces.
+    
+    Args:
+        text (str): Input text with attached punctuation
+        
+    Returns:
+        str: Text with punctuation separated by spaces
+        
+    Example:
+        >>> separate_punctuation("Hello,world!")
+        'Hello , world !'
+    """
+    # Separate punctuation with spaces
+    text = re.sub(r'([.,!?;:])', r' \1 ', text)
+    # Clean up multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+def preserve_contractions(text):
+    """
+    CUSTOM HELPER: Separate punctuation while preserving contractions.
+    
+    Args:
+        text (str): Input text containing contractions
+        
+    Returns:
+        str: Text with punctuation separated but contractions intact
+        
+    Example:
+        >>> preserve_contractions("I don't think so,really.")
+        "I don't think so , really ."
+    """
+    # Protect contractions first
+    contraction_pattern = r"\b\w+'\w+\b"
+    contractions_found = re.findall(contraction_pattern, text)
+    
+    # Replace with placeholders
+    for i, contraction in enumerate(contractions_found):
+        text = text.replace(contraction, f"__CONTRACTION_{i}__", 1)
+    
+    # Separate other punctuation
+    text = re.sub(r'([.,!?;:])', r' \1 ', text)
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Restore contractions
+    for i, contraction in enumerate(contractions_found):
+        text = text.replace(f"__CONTRACTION_{i}__", contraction)
+    
+    return text.strip()
+\end{lstlisting}
+\end{custombox}
+
+\begin{nativebox}{\texttt{contractions.fix()} - Third-Party Contraction Expansion}
+\textbf{Library}: \texttt{contractions} (install via \texttt{pip install contractions}) \\
+\textbf{Syntax}: \texttt{contractions.fix(text, slang=True)} \\
+\textbf{Parameters}:
+\begin{itemize}
+\item \texttt{text}: Input string containing contractions
+\item \texttt{slang}: Boolean to include informal contractions
+\end{itemize}
+
+\textbf{Returns}: String with contractions expanded
+
+\begin{lstlisting}[caption=Direct contraction expansion]
+import contractions
+
+# Direct usage of library function
+text = "I don't think you're right"
+expanded = contractions.fix(text)  # Returns: "I do not think you are right"
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom Contraction Handling Functions}
+
+\begin{lstlisting}[caption=Custom contraction processing helpers]
+def expand_contractions(text):
+    """
+    CUSTOM HELPER: Expand contractions to full forms.
+    
+    Args:
+        text (str): Text containing contractions
+        
+    Returns:
+        str: Text with contractions expanded
+        
+    Example:
+        >>> expand_contractions("I don't think you're right")
+        "I do not think you are right"
+    """
+    return contractions.fix(text)
+
+def custom_contraction_handler(text, expand=True):
+    """
+    CUSTOM HELPER: Custom contraction handling with option to preserve or expand.
+    
+    Args:
+        text (str): Input text
+        expand (bool): Whether to expand contractions
+        
+    Returns:
+        str: Processed text
+    """
+    if expand:
+        return contractions.fix(text)
+    else:
+        # Just separate contractions as single tokens
+        return re.sub(r"(\w+)'(\w+)", r"\1'\2", text)
+\end{lstlisting}
+\end{custombox}
+
+\subsection{Tokenization Functions}
+
+\begin{nativebox}{\texttt{str.split()} - Native Basic Tokenization}
+\textbf{Library}: Python built-in \\
+\textbf{Syntax}: \texttt{text.split(sep=None, maxsplit=-1)} \\
+\textbf{Parameters}:
+\begin{itemize}
+\item \texttt{sep}: Delimiter string (None for any whitespace)
+\item \texttt{maxsplit}: Maximum number of splits
+\end{itemize}
+
+\textbf{Returns}: List of string tokens \\
+\textbf{Time Complexity}: O(n)
+
+\begin{lstlisting}[caption=Direct string splitting examples]
+# Direct usage examples
+text = "Hello world example"
+tokens = text.split()  # Returns: ['Hello', 'world', 'example']
+
+# With custom delimiter
+text = "apple,banana,cherry"
+tokens = text.split(',')  # Returns: ['apple', 'banana', 'cherry']
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom Basic Tokenization Functions}
+
+\begin{lstlisting}[caption=Custom tokenization helper functions]
+def basic_tokenize(text):
+    """
+    CUSTOM HELPER: Simple whitespace-based tokenization.
+    
+    Args:
+        text (str): Input text string
+        
+    Returns:
+        list: List of token strings
+        
+    Example:
+        >>> basic_tokenize("Hello world example")
+        ['Hello', 'world', 'example']
+    """
+    return text.split()
+
+def custom_delimiter_tokenize(text, delimiters=None):
+    """
+    CUSTOM HELPER: Tokenization with custom delimiters.
+    
+    Args:
+        text (str): Input text
+        delimiters (list): List of delimiter characters
+        
+    Returns:
+        list: List of tokens
+    """
+    if delimiters is None:
+        delimiters = [' ', '\t', '\n']
+    
+    pattern = '[' + re.escape(''.join(delimiters)) + ']+'
+    tokens = re.split(pattern, text)
+    return [token for token in tokens if token]
+\end{lstlisting}
+\end{custombox}
+
+\begin{nativebox}{\texttt{nltk.tokenize.word\_tokenize()} - NLTK Advanced Tokenization}
+\textbf{Library}: NLTK (install via \texttt{pip install nltk}, requires \texttt{nltk.download('punkt')}) \\
+\textbf{Syntax}: \texttt{nltk.tokenize.word\_tokenize(text, language='english')} \\
+\textbf{Parameters}:
+\begin{itemize}
+\item \texttt{text}: Input string to tokenize
+\item \texttt{language}: Language for tokenization rules
+\end{itemize}
+
+\textbf{Returns}: List of tokens following linguistic conventions
+
+\begin{lstlisting}[caption=NLTK tokenization examples]
+import nltk
+from nltk.tokenize import word_tokenize, sent_tokenize
+
+# Direct usage
+text = "Dr. Smith's don't work."
+tokens = word_tokenize(text)  # Returns: ['Dr.', 'Smith', "'s", 'do', "n't", 'work', '.']
+
+# Sentence tokenization
+sentences = sent_tokenize(text)  # Returns: ["Dr. Smith's don't work."]
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom NLTK-Based Functions}
+
+\begin{lstlisting}[caption=Custom NLTK wrapper functions]
+def linguistic_tokenize(text):
+    """
+    CUSTOM HELPER: Linguistically-aware tokenization using NLTK.
+    
+    Args:
+        text (str): Input text string
+        
+    Returns:
+        list: List of linguistically meaningful tokens
+        
+    Example:
+        >>> linguistic_tokenize("Dr. Smith's don't work.")
+        ['Dr.', 'Smith', "'s", 'do', "n't", 'work', '.']
+    """
+    return word_tokenize(text)
+
+def sentence_aware_tokenize(text):
+    """
+    CUSTOM HELPER: Tokenize while preserving sentence boundaries.
+    
+    Args:
+        text (str): Multi-sentence text
+        
+    Returns:
+        list: List of sentences, each as list of tokens
+    """
+    sentences = sent_tokenize(text)
+    return [word_tokenize(sentence) for sentence in sentences]
+\end{lstlisting}
+\end{custombox}
+
+\begin{nativebox}{\texttt{spacy} - Industrial-Strength Tokenization}
+\textbf{Library}: spaCy (install via \texttt{pip install spacy}, download models with \texttt{python -m spacy download en\_core\_web\_sm}) \\
+\textbf{Syntax}: \texttt{nlp(text)} where \texttt{nlp = spacy.load(model)} \\
+\textbf{Parameters}:
+\begin{itemize}
+\item \texttt{text}: Input string
+\item Model selection affects tokenization behavior
+\end{itemize}
+
+\textbf{Returns}: spaCy Doc object with rich linguistic annotations
+
+\begin{lstlisting}[caption=Direct spaCy usage]
+import spacy
+
+# Direct usage
+nlp = spacy.load('en_core_web_sm')
+doc = nlp("Hello world!")
+tokens = [token.text for token in doc]  # Extract token text
+
+# Access linguistic features
+for token in doc:
+    print(token.text, token.pos_, token.lemma_, token.is_punct)
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom spaCy-Based Functions}
+
+\begin{lstlisting}[caption=Custom spaCy wrapper functions]
+def spacy_tokenize(text, model_name='en_core_web_sm'):
+    """
+    CUSTOM HELPER: spaCy-based tokenization with linguistic features.
+    
+    Args:
+        text (str): Input text
+        model_name (str): spaCy model identifier
+        
+    Returns:
+        list: List of token strings with additional attributes
+    """
+    try:
+        nlp = spacy.load(model_name)
+    except OSError:
+        print(f"Model {model_name} not found. Download with: python -m spacy download {model_name}")
+        raise
+    
+    doc = nlp(text)
+    return [token.text for token in doc]
+
+def spacy_detailed_tokenize(text, model_name='en_core_web_sm'):
+    """
+    CUSTOM HELPER: Extract detailed token information using spaCy.
+    
+    Args:
+        text (str): Input text
+        model_name (str): spaCy model name
+        
+    Returns:
+        list: List of dictionaries with token attributes
+    """
+    nlp = spacy.load(model_name)
+    doc = nlp(text)
+    
+    tokens = []
+    for token in doc:
+        tokens.append({
+            'text': token.text,
+            'lemma': token.lemma_,
+            'pos': token.pos_,
+            'is_punct': token.is_punct,
+            'is_space': token.is_space,
+            'is_alpha': token.is_alpha
+        })
+    return tokens
+\end{lstlisting}
+\end{custombox}
+
+\section{Important Notation for Remaining Sections}
+
+\textbf{For the remainder of this document, all functions are marked with:}
+\begin{itemize}
+\item \textbf{\textcolor{nativecolor}{NATIVE FUNCTIONS}}: Direct library functions you can call immediately
+\item \textbf{\textcolor{customcolor}{CUSTOM HELPERS}}: Implementation examples you need to define yourself
+\end{itemize}
+
+\textbf{Pattern Recognition:}
+\begin{itemize}
+\item Functions with standard library syntax (e.g., \texttt{collections.Counter(tokens)}) are \textbf{\textcolor{nativecolor}{NATIVE}}
+\item Functions with descriptive names (e.g., \texttt{build\_vocabulary()}, \texttt{analyze\_frequency\_distribution()}) are \textbf{\textcolor{customcolor}{CUSTOM HELPERS}}
+\end{itemize}
+
+\section{Phase II: Vocabulary Construction and Frequency Analysis}
+
+\subsection{Frequency Computation Functions}
+
+\begin{nativebox}{\texttt{collections.Counter} - Native Token Counting}
+\textbf{Library}: Python built-in \\
+\textbf{Syntax}: \texttt{Counter(iterable)} \\
+\textbf{Parameters}: Iterable of hashable objects (tokens) \\
+\textbf{Returns}: Counter object mapping items to frequencies \\
+\textbf{Time Complexity}: O(n)
+
+\begin{lstlisting}[caption=Direct Counter usage]
+from collections import Counter
+
+# Direct usage
+tokens = ['the', 'cat', 'sat', 'on', 'the', 'mat']
+freq_counter = Counter(tokens)
+# Returns: Counter({'the': 2, 'cat': 1, 'sat': 1, 'on': 1, 'mat': 1})
+
+# Most common items
+most_common = freq_counter.most_common(3)  # Top 3 items
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom Frequency Analysis Functions}
+
+\begin{lstlisting}[caption=Custom frequency computation helpers]
+def compute_token_frequencies(tokens):
+    """
+    CUSTOM HELPER: Compute frequency distribution of tokens.
+    
+    Args:
+        tokens (list): List of token strings
+        
+    Returns:
+        Counter: Frequency distribution
+        
+    Example:
+        >>> tokens = ['the', 'cat', 'sat', 'on', 'the', 'mat']
+        >>> compute_token_frequencies(tokens)
+        Counter({'the': 2, 'cat': 1, 'sat': 1, 'on': 1, 'mat': 1})
+    """
+    return Counter(tokens)
+
+def corpus_frequency_analysis(corpus_documents):
+    """
+    CUSTOM HELPER: Compute frequency statistics across multiple documents.
+    
+    Args:
+        corpus_documents (list): List of document token lists
+        
+    Returns:
+        dict: Comprehensive frequency statistics
+    """
+    all_tokens = []
+    for doc_tokens in corpus_documents:
+        all_tokens.extend(doc_tokens)
+    
+    freq_counter = Counter(all_tokens)
+    
+    return {
+        'total_tokens': len(all_tokens),
+        'unique_tokens': len(freq_counter),
+        'frequency_distribution': freq_counter,
+        'most_common_10': freq_counter.most_common(10),
+        'hapax_legomena': sum(1 for count in freq_counter.values() if count == 1)
+    }
+\end{lstlisting}
+\end{custombox}
+
+\begin{nativebox}{\texttt{Counter.most\_common()} - Native Vocabulary Selection}
+\textbf{Library}: Python built-in (part of Counter) \\
+\textbf{Syntax}: \texttt{counter.most\_common(n=None)} \\
+\textbf{Parameters}: \texttt{n} - number of most common items to return \\
+\textbf{Returns}: List of (element, count) tuples
+
+\begin{lstlisting}[caption=Direct vocabulary selection]
+# Direct usage
+freq_counter = Counter(['a', 'b', 'a', 'c', 'b', 'a'])
+top_items = freq_counter.most_common(2)  # Returns: [('a', 3), ('b', 2)]
+
+# Filter by frequency threshold
+filtered_items = [(token, count) for token, count in freq_counter.items() if count >= 2]
+\end{lstlisting}
+\end{nativebox}
+
+\begin{custombox}{Custom Vocabulary Building Functions}
+
+\begin{lstlisting}[caption=Custom vocabulary construction helper]
+def build_vocabulary(tokens, vocab_size=None, min_frequency=1):
+    """
+    CUSTOM HELPER: Build vocabulary from tokens with frequency filtering.
+    
+    Args:
+        tokens (list): Token list
+        vocab_size (int): Maximum vocabulary size
+        min_frequency (int): Minimum frequency threshold
+        
+    Returns:
+        dict: Vocabulary mapping and statistics
+    """
+    freq_counter = Counter(tokens)
+    
+    # Filter by minimum frequency
+    filtered_items = [(token, count) for token, count in freq_counter.items() 
+                     if count >= min_frequency]
+    
+    # Sort by frequency and apply size limit
+    if vocab_size:
+        most_common = sorted(filtered_items, key=lambda x: x[1], reverse=True)[:vocab_size]
+    else:
+        most_common = sorted(filtered_items, key=lambda x: x[1], reverse=True)
+    
+    # Create vocabulary mappings
+    token_to_id = {token: idx for idx, (token, _) in enumerate(most_common)}
+    id_to_token = {idx: token for token, idx in token_to_id.items()}
+    
+    return {
+        'token_to_id': token_to_id,
+        'id_to_token': id_to_token,
+        'vocabulary_size': len(token_to_id),
+        'frequency_stats': dict(most_common),
+        'coverage': sum(count for _, count in most_common) / sum(freq_counter.values())
+    }
+\end{lstlisting}
+\end{custombox}
+
+\section{Summary: Native vs Custom Function Classification}
+
+\subsection{\textcolor{nativecolor}{NATIVE LIBRARY FUNCTIONS} (Ready to use immediately):}
+\begin{itemize}
+\item \texttt{str.lower()}, \texttt{str.casefold()}, \texttt{str.split()}
+\item \texttt{re.sub()}, \texttt{re.findall()}, \texttt{re.split()}
+\item \texttt{contractions.fix()}
+\item \texttt{nltk.tokenize.word\_tokenize()}, \texttt{nltk.tokenize.sent\_tokenize()}
+\item \texttt{spacy.load()} and spaCy Doc operations
+\item \texttt{collections.Counter()}, \texttt{Counter.most\_common()}
+\item \texttt{scipy.sparse.dok\_matrix()}, \texttt{scipy.sparse.csr\_matrix()}
+\item \texttt{numpy.log1p()}, \texttt{numpy.array()}, \texttt{numpy.sum()}
+\item \texttt{sklearn.decomposition.PCA()}, \texttt{sklearn.decomposition.TruncatedSVD()}
+\item \texttt{sklearn.metrics.pairwise.cosine\_similarity()}
+\item \texttt{gensim.models.KeyedVectors.load\_word2vec\_format()}
+\item \texttt{tensorflow.keras.preprocessing.sequence.pad\_sequences()}
+\item \texttt{torch.utils.data.DataLoader()}, \texttt{torch.nn.utils.rnn.pad\_sequence()}
+\end{itemize}
+
+\subsection{\textcolor{customcolor}{CUSTOM HELPER FUNCTIONS} (You need to implement these):}
+\begin{itemize}
+\item \texttt{normalize\_case()}, \texttt{separate\_punctuation()}, \texttt{preserve\_contractions()}
+\item \texttt{basic\_tokenize()}, \texttt{linguistic\_tokenize()}, \texttt{spacy\_tokenize()}
+\item \texttt{build\_vocabulary()}, \texttt{corpus\_frequency\_analysis()}
+\item \texttt{extract\_context\_windows()}, \texttt{build\_cooccurrence\_matrix()}
+\item \texttt{analyze\_matrix\_dimensionality()}, \texttt{evaluate\_embedding\_quality()}
+\item \texttt{align\_vocabularies()}, \texttt{create\_embedding\_matrix()}
+\item \texttt{prepare\_sequences\_for\_nn()}, \texttt{TextEmbeddingDataset} class
+\end{itemize}
+
+\textbf{Implementation Strategy}: Start with native functions for core operations, then implement custom helpers as needed for your specific pipeline requirements.
+
+\end{document}
