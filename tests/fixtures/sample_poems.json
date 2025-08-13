@@ -1,0 +1,57 @@
+[
+  {
+    "url": "test://poem1",
+    "author": "Test Poet",
+    "title": "Test Poem One", 
+    "text": "Love is like the summer rain,\nFalling softly on my heart.\nNumbers like 6 and 80 remain,\nWhen we are far apart.\n\n❤️ forever ❤️",
+    "content_type": "poetry",
+    "length": 95,
+    "line_count": 5,
+    "source": "Test Collection",
+    "dbbc_score": 25
+  },
+  {
+    "url": "test://poem2",
+    "author": "Test Poet", 
+    "title": "＊✿❀ Digital Dreams ❀✿＊",
+    "text": "i write in lowercase\nbecause CAPITALS are for\nSERIOUS THINGS\n\nlike paying taxes\nand forgetting passwords",
+    "content_type": "poetry",
+    "length": 78,
+    "line_count": 6,
+    "source": "Test Collection",
+    "dbbc_score": 18
+  },
+  {
+    "url": "test://poem3",
+    "author": "Another Poet",
+    "title": "Short Poem",
+    "text": "brief\npoetic\nmoment", 
+    "content_type": "poetry",
+    "length": 19,
+    "line_count": 3,
+    "source": "Test Collection",
+    "dbbc_score": 10
+  },
+  {
+    "url": "test://poem4",
+    "author": "Alt-lit Poet",
+    "title": "Modern Feelings",
+    "text": "my phone died\nat 3am\nwhile texting you\n\ni felt more alone\nthan when\nmy grandmother\npassed away",
+    "content_type": "poetry", 
+    "length": 67,
+    "line_count": 8,
+    "source": "Test Collection",
+    "dbbc_score": 32
+  },
+  {
+    "url": "test://poem5",
+    "author": "Unicode Poet",
+    "title": "❤️ Special Characters Test ❤️",
+    "text": "＊✿❀ ☁️ testing unicode ❀✿＊\n🌙 moon emoji here 🌙\nand numbers: 1, 2, 3, 42\nand MiXeD cAsE words",
+    "content_type": "poetry",
+    "length": 89,
+    "line_count": 4,
+    "source": "Test Collection", 
+    "dbbc_score": 28
+  }
+]
