@@ -73,7 +73,7 @@ class Config:
         self.project_root = self._detect_project_root()
         self.data_dir = self.project_root / "dataset_poetry"
         self.embeddings_dir = self.project_root / "embeddings" 
-        self.artifacts_dir = self.project_root / "GLoVe preprocessing" / "preprocessed_artifacts"
+        self.artifacts_dir = self.project_root / "GloVe_preprocessing" / "preprocessed_artifacts"
         
         # Initialize sub-configurations
         self.tokenization = TokenizationConfig()
