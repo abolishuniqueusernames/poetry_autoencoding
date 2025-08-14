@@ -4,25 +4,39 @@ Poetry RNN Autoencoder Package
 A modular, production-grade implementation for preprocessing poetry text
 and training RNN autoencoders for dimensionality reduction.
 
-This package provides a complete pipeline from raw poetry JSON files to 
-training-ready PyTorch datasets, with support for:
+This package provides both high-level and low-level APIs:
 
-High-Level API:
-- PoetryPreprocessor: One-line setup for complete preprocessing pipeline
+High-Level API (Recommended):
+- poetry_autoencoder(): One-line function for complete training
+- RNN: High-level model interface with lazy initialization
+- Configuration dataclasses with validation and presets
+
+Low-Level API (Advanced Users):
+- PoetryPreprocessor: Detailed preprocessing pipeline control
 - AutoencoderDataset: PyTorch-compatible dataset with efficient loading
-- Configuration system: Centralized settings management
+- Individual model components and trainers
 
-Core Components:
-- Poetry-specific tokenization preserving semantic elements
-- GLoVe embedding integration with vocabulary alignment  
-- Sliding window chunking for maximum data preservation
-- Co-occurrence matrix analysis for effective dimensionality
-- Comprehensive testing and validation
+Example Usage (High-Level):
+    >>> from poetry_rnn.api import poetry_autoencoder
+    >>> 
+    >>> # One-line training
+    >>> model = poetry_autoencoder("poems.json")
+    >>> 
+    >>> # Custom configuration
+    >>> model = poetry_autoencoder(
+    ...     data_path="poems.json",
+    ...     design={"hidden_size": 512, "bottleneck_size": 64, "rnn_type": "lstm"},
+    ...     training={"epochs": 30, "curriculum_phases": 4},
+    ...     output_dir="./results"
+    ... )
+    >>> 
+    >>> # Generate poetry
+    >>> poem = model.generate("In the beginning", length=100)
 
-Example Usage:
+Example Usage (Low-Level):
     >>> from poetry_rnn import PoetryPreprocessor, AutoencoderDataset
     >>> 
-    >>> # Simple preprocessing
+    >>> # Detailed preprocessing control
     >>> preprocessor = PoetryPreprocessor()
     >>> results = preprocessor.process_poems("poems.json")
     >>> 
@@ -36,16 +50,19 @@ Example Usage:
     ... )
 
 Author: Created through collaborative learning with Claude
-Version: 1.0.0
+Version: 2.0.0
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __author__ = "Poetry RNN Collaborative Project"
 
 # High-level API imports
 from .pipeline import PoetryPreprocessor
 from .dataset import AutoencoderDataset, create_poetry_datasets, create_poetry_dataloaders
 from .config import Config
+
+# New High-Level API
+from .api import poetry_autoencoder, RNN
 
 # Core component imports
 from .tokenization.poetry_tokenizer import PoetryTokenizer
@@ -70,7 +87,11 @@ __all__ = [
     "__version__",
     "__author__",
     
-    # High-level API
+    # High-level API (New - Recommended)
+    "poetry_autoencoder",
+    "RNN",
+    
+    # High-level API (Legacy - Still Supported)
     "PoetryPreprocessor",
     "AutoencoderDataset", 
     "create_poetry_datasets",
