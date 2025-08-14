@@ -125,8 +125,21 @@ class ArtifactManager:
                 
             with open(self.artifacts_dir / f"metadata_{timestamp}.json") as f:
                 metadata = json.load(f)
+            
+            # Load chunk metadata if available    
+            chunk_metadata_path = self.artifacts_dir / f"chunk_metadata_{timestamp}.json"
+            if chunk_metadata_path.exists():
+                with open(chunk_metadata_path) as f:
+                    chunk_metadata = json.load(f)
+                metadata['chunk_metadata'] = chunk_metadata
                 
-        return token_sequences, embedding_sequences, attention_masks, vocabulary, metadata
+        return {
+            'token_sequences': token_sequences,
+            'embedding_sequences': embedding_sequences,
+            'attention_masks': attention_masks,
+            'vocabulary': vocabulary,
+            'metadata': metadata
+        }
     
     def _create_latest_symlinks(self, saved_files: Dict[str, str], timestamp: str) -> None:
         """Create symlinks to latest versions"""
