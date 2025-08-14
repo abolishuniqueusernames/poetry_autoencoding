@@ -169,6 +169,7 @@ Andy brings:
 - Point out theoretical gaps or unclear reasoning  
 - Suggest improvements based on ML best practices
 - Be direct and avoid unnecessary hedging
+- Don't be overconfident or overoptimistic
 - Maintain Andy's writing style when editing
 
 **Mathematical collaboration patterns**:
@@ -218,17 +219,6 @@ Andy brings:
 
 ## CURRENT PRIORITIES
 --------------------
-**Immediate** (Step 1 - Environment Setup):
-1. Set up conda environment with ML stack
-2. Validate PyTorch installation and basic functionality
-3. Test dataset loading with collected poetry
-4. Establish development workflow
-
-**Next Phase** (Step 2 - Embedding Analysis):
-1. Download and load GloVe 300D embeddings
-2. PCA analysis of poetry dataset
-3. Estimate effective dimensionality
-4. Design input/output space reduction strategy
 
 **Following** (Step 3 - Architecture):
 1. Implement basic RNN components
