@@ -1,0 +1,46 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Preprocessed artifacts with timestamps
+preprocessed_artifacts/*_2025*
+GloVe_preprocessing/preprocessed_artifacts/*_2025*
+
+# Training checkpoints (keep only best/final models)
+checkpoint_epoch_*.pth
+*_checkpoint_*.pth
+
+# Log files
+*.log
+training_output*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Large data files (optional - uncomment if needed)
+# *.npy
+# *.npz
+# embeddings/*.txt
