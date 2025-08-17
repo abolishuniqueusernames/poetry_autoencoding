@@ -119,6 +119,78 @@ class OptimizedRNNTrainer:
         
         # Move model to device
         self.model = self.model.to(self.device)
+    
+    def load_checkpoint(self, checkpoint_path: str, resume_training: bool = True):
+        """
+        Load a checkpoint and optionally resume training from that point.
+        
+        Args:
+            checkpoint_path: Path to checkpoint file
+            resume_training: If True, restore training state (epoch, optimizer, scheduler)
+                           If False, only load model weights
+        
+        Returns:
+            Dictionary with checkpoint info and loaded epoch
+        """
+        logger.info(f"Loading checkpoint from: {checkpoint_path}")
+        
+        if not Path(checkpoint_path).exists():
+            raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+        
+        # Load checkpoint
+        checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+        
+        # Load model state
+        if 'model_state_dict' in checkpoint:
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            logger.info("✅ Model weights loaded successfully")
+        else:
+            # Fallback for older checkpoint format
+            self.model.load_state_dict(checkpoint)
+            logger.info("✅ Model weights loaded (legacy format)")
+        
+        if resume_training:
+            # Restore training state
+            if 'epoch' in checkpoint:
+                self.current_epoch = checkpoint['epoch']
+                logger.info(f"📍 Resuming from epoch {self.current_epoch}")
+            
+            if 'optimizer_state_dict' in checkpoint and self.optimizer:
+                # Ensure initial_lr is set for scheduler compatibility
+                for param_group in self.optimizer.param_groups:
+                    if 'initial_lr' not in param_group:
+                        param_group['initial_lr'] = param_group['lr']
+                
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                logger.info("✅ Optimizer state restored")
+            
+            if 'scheduler_state_dict' in checkpoint and self.scheduler:
+                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+                logger.info("✅ Scheduler state restored")
+            
+            if 'best_val_loss' in checkpoint:
+                self.best_val_loss = checkpoint['best_val_loss']
+                logger.info(f"📊 Best validation loss: {self.best_val_loss:.6f}")
+            
+            if 'best_cosine_similarity' in checkpoint:
+                self.best_cosine_similarity = checkpoint.get('best_cosine_similarity', 0.0)
+                logger.info(f"📊 Best cosine similarity: {self.best_cosine_similarity:.4f}")
+            
+            # Reset patience counter for early stopping
+            self.patience_counter = 0
+            logger.info("🔄 Early stopping patience counter reset")
+        
+        # Extract checkpoint metadata
+        checkpoint_info = {
+            'epoch': checkpoint.get('epoch', 0),
+            'val_loss': checkpoint.get('best_val_loss', float('inf')),
+            'cosine_similarity': checkpoint.get('best_cosine_similarity', 0.0),
+            'config': checkpoint.get('config', {}),
+            'val_metrics': checkpoint.get('val_metrics', {})
+        }
+        
+        logger.info("🎯 Checkpoint loaded successfully!")
+        return checkpoint_info
         
     def _setup_loss_function(self):
         """Initialize loss function based on configuration."""
@@ -453,17 +525,21 @@ class OptimizedRNNTrainer:
         logger.info("Starting optimized training...")
         training_start = time.perf_counter()
         
+        # Initialize best metrics (may be overridden by resumed checkpoint)
         best_metrics = {
-            'best_val_loss': float('inf'),
-            'best_cosine_similarity': 0.0,
-            'best_epoch': 0,
+            'best_val_loss': self.best_val_loss,
+            'best_cosine_similarity': self.best_cosine_similarity,
+            'best_epoch': self.current_epoch,
             'total_time': 0,
             'avg_throughput': 0
         }
         
         all_throughputs = []
         
-        for epoch in range(1, self.num_epochs + 1):
+        # Support resumed training - start from current_epoch + 1
+        start_epoch = self.current_epoch + 1 if self.current_epoch > 0 else 1
+        
+        for epoch in range(start_epoch, self.num_epochs + 1):
             self.current_epoch = epoch
             epoch_start = time.perf_counter()
             
@@ -476,10 +552,14 @@ class OptimizedRNNTrainer:
             # Validation
             val_loss, val_metrics = self.validate()
             
-            # Update learning rate
+            # Update learning rate (handle different scheduler types)
             if self.scheduler:
                 if hasattr(self.scheduler, 'step'):
-                    self.scheduler.step()
+                    # ReduceLROnPlateau requires validation metric
+                    if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        self.scheduler.step(val_loss)
+                    else:
+                        self.scheduler.step()
                 current_lr = self.optimizer.param_groups[0]['lr']
             else:
                 current_lr = self.optimizer.param_groups[0]['lr']
@@ -563,9 +643,40 @@ class OptimizedRNNTrainer:
                     checkpoint_path = Path(self.config['paths']['checkpoint_dir']) / f"checkpoint_epoch_{epoch}.pth"
                     torch.save(checkpoint, checkpoint_path)
             
-            # Early stopping
+            # Enhanced early stopping with attention monitoring
+            early_stop = False
+            
+            # Standard early stopping based on validation loss
             if self.patience_counter >= self.early_stopping_patience:
-                logger.info(f"\nEarly stopping triggered after {epoch} epochs")
+                logger.info(f"\n⏹️  Early stopping triggered after {epoch} epochs (no improvement)")
+                early_stop = True
+            
+            # Attention degradation monitoring (if enabled and attention is available)
+            if (hasattr(self.model, 'use_attention') and self.model.use_attention and 
+                attention_stats and self.config.get('monitoring', {}).get('attention_monitoring', False)):
+                
+                attention_entropy = attention_stats.get('avg_attention_entropy', 0)
+                attention_diversity = attention_stats.get('attention_diversity', 0)
+                
+                # Check for attention degradation
+                entropy_threshold = self.config.get('monitoring', {}).get('attention_entropy_threshold', 0.5)
+                diversity_min = self.config.get('monitoring', {}).get('attention_diversity_min', 0.001)
+                
+                if attention_entropy > entropy_threshold:
+                    logger.warning(f"⚠️  Attention entropy high: {attention_entropy:.3f} > {entropy_threshold}")
+                    logger.warning("   Attention patterns becoming too diffuse")
+                
+                if attention_diversity < diversity_min:
+                    logger.warning(f"⚠️  Attention diversity low: {attention_diversity:.4f} < {diversity_min}")
+                    logger.warning("   Attention heads becoming too similar")
+                
+                # Stop if attention severely degraded
+                if attention_entropy > entropy_threshold * 1.5 and attention_diversity < diversity_min * 0.5:
+                    logger.info(f"\n⚠️  Early stopping due to attention degradation at epoch {epoch}")
+                    logger.info(f"   Entropy: {attention_entropy:.3f}, Diversity: {attention_diversity:.4f}")
+                    early_stop = True
+            
+            if early_stop:
                 break
             
             # Check if we've reached target performance

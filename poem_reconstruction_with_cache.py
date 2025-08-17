@@ -1,20 +1,6 @@
 #!/usr/bin/env python3
 """
-Poem Reconstruction Comparison Script
-
-This script loads a trained autoencoder model and compares original poems
-with their reconstructed versions to evaluate semantic preservation quality.
-
-Features:
-- Load trained model from checkpoint
-- Process poems through encode -> decode pipeline
-- Display side-by-side comparison with similarity metrics
-- Support for multiple poems and interactive selection
-- Semantic similarity analysis using cosine similarity
-- Word-level and line-level comparison
-
-Usage:
-    python compare_poem_reconstruction.py [--model MODEL_PATH] [--poem-index INDEX]
+Poem Reconstruction with Caching - Optimized version that saves preprocessing artifacts
 """
 
 import sys
@@ -39,14 +25,13 @@ def load_trained_model(model_path: str) -> Tuple[RNNAutoencoder, Dict]:
     if not Path(model_path).exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
     
-    # Load checkpoint
+    # Load checkpoint with fixed weights_only parameter
     checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
     
     # Extract model configuration
     if 'config' in checkpoint:
         model_config = checkpoint['config']['model']
     else:
-        # Fallback configuration for older checkpoints
         print("⚠️  No config found in checkpoint, using default configuration")
         model_config = {
             'input_dim': 300,
@@ -92,28 +77,14 @@ def load_trained_model(model_path: str) -> Tuple[RNNAutoencoder, Dict]:
     
     if 'final_cosine_similarity' in checkpoint:
         print(f"   Training performance: {checkpoint['final_cosine_similarity']:.4f} cosine similarity")
+    elif 'best_cosine_similarity' in checkpoint:
+        print(f"   Training performance: {checkpoint['best_cosine_similarity']:.4f} cosine similarity")
     
     return model, checkpoint
 
-def load_poems(data_path: str = None) -> List[Dict]:
-    """Load poems from the dataset."""
-    if data_path is None:
-        data_path = 'dataset_poetry/multi_poem_dbbc_collection.json'
-    
-    print(f"📚 Loading poems from: {data_path}")
-    
-    if not Path(data_path).exists():
-        raise FileNotFoundError(f"Dataset not found: {data_path}")
-    
-    with open(data_path, 'r', encoding='utf-8') as f:
-        poems = json.load(f)
-    
-    print(f"✅ Loaded {len(poems)} poems")
-    return poems
-
-def setup_preprocessor() -> Tuple[PoetryPreprocessor, AutoencoderDataset]:
-    """Setup the poetry preprocessor and dataset."""
-    print("🔧 Setting up preprocessor...")
+def setup_preprocessor_with_cache() -> Tuple[PoetryPreprocessor, AutoencoderDataset]:
+    """Setup the poetry preprocessor with caching enabled."""
+    print("🔧 Setting up preprocessor with caching...")
     
     # Initialize preprocessor
     poetry_config = Config()
@@ -123,9 +94,10 @@ def setup_preprocessor() -> Tuple[PoetryPreprocessor, AutoencoderDataset]:
     
     preprocessor = PoetryPreprocessor(config=poetry_config)
     
-    # Process data (this loads embeddings and creates dataset)
+    # Process data with artifacts saving enabled
     data_path = 'dataset_poetry/multi_poem_dbbc_collection.json'
-    results = preprocessor.process_poems(data_path, save_artifacts=False)
+    print("📚 Processing poems (saving artifacts for future use)...")
+    results = preprocessor.process_poems(data_path, save_artifacts=True)  # Enable caching
     
     # Create dataset
     dataset = AutoencoderDataset(
@@ -136,7 +108,7 @@ def setup_preprocessor() -> Tuple[PoetryPreprocessor, AutoencoderDataset]:
         vocabulary=results['vocabulary']
     )
     
-    print("✅ Preprocessor ready")
+    print("✅ Preprocessor ready with caching enabled")
     return preprocessor, dataset
 
 def compute_similarity_metrics(original: torch.Tensor, reconstructed: torch.Tensor, 
@@ -167,40 +139,8 @@ def compute_similarity_metrics(original: torch.Tensor, reconstructed: torch.Tens
         'valid_tokens': valid_tokens
     }
 
-def find_closest_words(embedding: torch.Tensor, vocabulary: Dict[str, int], 
-                      embeddings_dict: Dict[str, torch.Tensor], top_k: int = 3) -> List[str]:
-    """Find the closest words to a given embedding."""
-    similarities = []
-    
-    for word, word_embedding in embeddings_dict.items():
-        sim = F.cosine_similarity(embedding.unsqueeze(0), word_embedding.unsqueeze(0))
-        similarities.append((word, sim.item()))
-    
-    # Sort by similarity and return top k
-    similarities.sort(key=lambda x: x[1], reverse=True)
-    return [word for word, _ in similarities[:top_k]]
-
-def reconstruct_text_approximation(embeddings: torch.Tensor, attention_mask: torch.Tensor,
-                                 vocabulary: Dict[str, int], embeddings_dict: Dict[str, torch.Tensor]) -> List[str]:
-    """Approximate text reconstruction by finding closest words to embeddings."""
-    reconstructed_words = []
-    
-    for i in range(embeddings.size(0)):
-        if attention_mask[i]:
-            embedding = embeddings[i]
-            closest_words = find_closest_words(embedding, vocabulary, embeddings_dict, top_k=1)
-            if closest_words:
-                reconstructed_words.append(closest_words[0])
-            else:
-                reconstructed_words.append("[UNK]")
-        else:
-            break  # Stop at padding
-    
-    return reconstructed_words
-
 def compare_poem_reconstruction(model: RNNAutoencoder, dataset: AutoencoderDataset, 
-                              poem_index: int, poems: List[Dict],
-                              vocabulary: Dict[str, int], embeddings_dict: Dict[str, torch.Tensor]):
+                              poem_index: int, poems: List[Dict]):
     """Compare original poem with its reconstruction."""
     
     # Get the data sample
@@ -215,7 +155,7 @@ def compare_poem_reconstruction(model: RNNAutoencoder, dataset: AutoencoderDatas
     print(f"\n🎭 POEM COMPARISON #{poem_index}")
     print("=" * 80)
     
-    # Show original poem info
+    # Show original poem info (using correct metadata keys)
     poem_info = poems[metadata['poem_idx']]
     print(f"📖 Original Poem: \"{poem_info['title']}\" by {poem_info['author']}")
     print(f"📊 Chunk: {metadata['chunk_id'] + 1}/{metadata['total_chunks_in_poem']} (tokens {metadata['start_position']}-{metadata['end_position']})")
@@ -247,19 +187,6 @@ def compare_poem_reconstruction(model: RNNAutoencoder, dataset: AutoencoderDatas
         reconstructed_embeddings.squeeze(0), 
         attention_mask.squeeze(0)
     )
-    
-    # Approximate reconstruction (find closest words)
-    reconstructed_words = reconstruct_text_approximation(
-        reconstructed_embeddings.squeeze(0),
-        attention_mask.squeeze(0),
-        vocabulary,
-        embeddings_dict
-    )
-    reconstructed_text = ' '.join(reconstructed_words)
-    
-    print(f"\n🔄 RECONSTRUCTED TEXT:")
-    print("-" * 40)
-    print(f"{reconstructed_text}")
     
     print(f"\n📊 SIMILARITY METRICS:")
     print("-" * 40)
@@ -297,100 +224,76 @@ def compare_poem_reconstruction(model: RNNAutoencoder, dataset: AutoencoderDatas
     
     return metrics
 
-def interactive_poem_browser(model: RNNAutoencoder, dataset: AutoencoderDataset, 
-                           poems: List[Dict], vocabulary: Dict[str, int], 
-                           embeddings_dict: Dict[str, torch.Tensor]):
-    """Interactive browser for comparing multiple poems."""
-    print(f"\n🎭 INTERACTIVE POEM BROWSER")
-    print("=" * 50)
-    print(f"Dataset contains {len(dataset)} poem chunks from {len(poems)} poems")
-    print("Commands:")
-    print("  [number] - View poem chunk by index")
-    print("  'random' - View random poem chunk")
-    print("  'list'   - List available poems")
-    print("  'quit'   - Exit browser")
-    
-    while True:
-        try:
-            cmd = input("\n> ").strip().lower()
-            
-            if cmd in ['quit', 'exit', 'q']:
-                break
-            elif cmd == 'random':
-                poem_index = np.random.randint(0, len(dataset))
-                compare_poem_reconstruction(model, dataset, poem_index, poems, vocabulary, embeddings_dict)
-            elif cmd == 'list':
-                print("\n📚 Available Poems:")
-                for i, poem in enumerate(poems[:10]):  # Show first 10
-                    print(f"  {i}: \"{poem['title']}\" by {poem['author']}")
-                if len(poems) > 10:
-                    print(f"  ... and {len(poems) - 10} more")
-            elif cmd.isdigit():
-                poem_index = int(cmd)
-                compare_poem_reconstruction(model, dataset, poem_index, poems, vocabulary, embeddings_dict)
-            else:
-                print("❌ Unknown command. Try a number, 'random', 'list', or 'quit'")
-                
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            print(f"❌ Error: {e}")
-    
-    print("\n👋 Thanks for exploring poem reconstructions!")
-
 def main():
     """Main function."""
-    parser = argparse.ArgumentParser(description='Compare original poems with autoencoder reconstructions')
+    parser = argparse.ArgumentParser(description='Compare original poems with autoencoder reconstructions (with caching)')
     parser.add_argument('--model', type=str, default='attention_optimized_model.pth',
                        help='Path to trained model checkpoint')
-    parser.add_argument('--poem-index', type=int, default=None,
+    parser.add_argument('--poem-index', type=int, default=0,
                        help='Specific poem chunk index to analyze')
-    parser.add_argument('--data-path', type=str, default=None,
+    parser.add_argument('--data-path', type=str, default='dataset_poetry/multi_poem_dbbc_collection.json',
                        help='Path to poems dataset')
-    parser.add_argument('--interactive', action='store_true',
-                       help='Enable interactive poem browser')
+    parser.add_argument('--num-samples', type=int, default=3,
+                       help='Number of sample poems to analyze')
     
     args = parser.parse_args()
     
-    print("🎭 Poem Reconstruction Comparison")
-    print("=" * 50)
+    print("🎭 Poem Reconstruction Analysis (Cached)")
+    print("=" * 60)
     
     try:
         # Load model
         model, checkpoint = load_trained_model(args.model)
         
-        # Load poems and setup preprocessor
-        poems = load_poems(args.data_path)
-        preprocessor, dataset = setup_preprocessor()
+        # Load poems
+        print(f"📚 Loading poems from: {args.data_path}")
+        with open(args.data_path, 'r', encoding='utf-8') as f:
+            poems = json.load(f)
+        print(f"✅ Loaded {len(poems)} poems")
         
-        # Get vocabulary and embeddings for text reconstruction
-        vocabulary = dataset.vocabulary
-        # Simple embeddings dict (in practice, you'd want the full GLoVe embeddings)
-        embeddings_dict = {}
+        # Setup preprocessor with caching
+        preprocessor, dataset = setup_preprocessor_with_cache()
         
-        print(f"\n🔍 Ready to compare reconstructions!")
+        print(f"\n🔍 Ready to compare reconstructions! Dataset has {len(dataset)} chunks.")
         
-        if args.interactive:
-            # Interactive browser
-            interactive_poem_browser(model, dataset, poems, vocabulary, embeddings_dict)
-        elif args.poem_index is not None:
+        # Analyze specific poem or samples
+        if args.poem_index is not None:
             # Single poem comparison
-            compare_poem_reconstruction(model, dataset, args.poem_index, poems, vocabulary, embeddings_dict)
+            compare_poem_reconstruction(model, dataset, args.poem_index, poems)
         else:
-            # Default: show a few examples
-            print("\n📋 Showing sample reconstructions...")
-            sample_indices = [0, len(dataset)//4, len(dataset)//2, 3*len(dataset)//4, len(dataset)-1]
+            # Multiple sample comparisons
+            print(f"\n📋 Analyzing {args.num_samples} sample reconstructions...")
+            sample_indices = np.linspace(0, len(dataset)-1, args.num_samples, dtype=int)
             
-            for i, idx in enumerate(sample_indices[:3]):  # Show first 3
-                compare_poem_reconstruction(model, dataset, idx, poems, vocabulary, embeddings_dict)
-                if i < 2:  # Add separator
+            total_cosine = 0
+            for i, idx in enumerate(sample_indices):
+                metrics = compare_poem_reconstruction(model, dataset, idx, poems)
+                total_cosine += metrics['cosine_similarity']
+                
+                if i < len(sample_indices) - 1:  # Add separator
                     print("\n" + "="*80)
             
-            print(f"\n💡 Use --interactive to explore more poems")
-            print(f"💡 Use --poem-index N to see specific chunk")
+            # Summary
+            avg_cosine = total_cosine / len(sample_indices)
+            print(f"\n🎯 SUMMARY:")
+            print("=" * 40)
+            print(f"Average Cosine Similarity: {avg_cosine:.4f}")
+            print(f"Samples Analyzed: {len(sample_indices)}")
+            
+            # Performance assessment
+            if avg_cosine >= 0.85:
+                print("🟢 EXCELLENT: Model shows strong semantic preservation")
+            elif avg_cosine >= 0.75:
+                print("🟡 GOOD: Model preserves semantic meaning well")
+            elif avg_cosine >= 0.65:
+                print("🟠 FAIR: Model preserves basic semantic structure")
+            else:
+                print("🔴 NEEDS IMPROVEMENT: Consider additional training or architecture changes")
     
     except Exception as e:
         print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
     
     return 0

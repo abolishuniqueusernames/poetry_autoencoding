@@ -8,6 +8,32 @@
 - GPU utilization optimization for larger models
 - **Priority**: High (significant speedup potential)
 
+### 🎯 **Neural Network Mentor's Performance Recommendations** ⭐
+Following architecture comparison validation, implement optimizations to achieve 0.85-0.95 cosine similarity:
+
+#### **CRITICAL FIXES (Immediate - High Priority)** 🚨:
+- **REPRESENTATION COLLAPSE FIX**: Increase bottleneck from 64D to 128D minimum
+- **OneCycleLR Scheduler**: Replace cosine annealing with higher peak LR (1e-3)
+- **Direct Cosine Similarity Loss**: Add to training objective for better optimization
+- **Information Maximization**: Prevent bottleneck collapse with regularization
+- **Curriculum Learning**: Start with shorter sequences, gradually increase complexity
+
+**Current Status**: Model plateaued at 0.619 due to 64D bottleneck being below critical information threshold for poetry complexity. Architecture needs emergency fix.
+
+**Theoretical Analysis**: 64D compression from 512D destroys too much information. Poetry requires 100-150D minimum for semantic preservation.
+
+#### **Architecture Refinements (Medium Priority)**:
+- **Variational Bottleneck** (VAE-style) with mu/sigma layers for regularization  
+- **Bidirectional LSTM** for encoder (2x context)
+- **Attention mechanism** for sequence alignment
+- **Layer Normalization** after bottleneck to stabilize training
+
+#### **Extended Training Optimizations (Completed)**:
+- ✅ **Extended Training**: 100+ epochs capability implemented
+- ✅ **Gradient Clipping**: `torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)` 
+- ✅ **Bottleneck Regularization**: L2 regularization implemented
+- ✅ **Performance Pipeline**: Threading, async I/O, DataLoader optimization working perfectly
+
 ### 🎯 **High-Level API Design**
 ```python
 # Target API design:
