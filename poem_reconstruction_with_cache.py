@@ -139,8 +139,74 @@ def compute_similarity_metrics(original: torch.Tensor, reconstructed: torch.Tens
         'valid_tokens': valid_tokens
     }
 
+def find_closest_words(embedding: torch.Tensor, glove_embeddings: Dict[str, torch.Tensor], 
+                      top_k: int = 3) -> List[Tuple[str, float]]:
+    """Find the closest words to a given embedding using cosine similarity."""
+    similarities = []
+    
+    for word, word_embedding in glove_embeddings.items():
+        sim = F.cosine_similarity(embedding.unsqueeze(0), word_embedding.unsqueeze(0))
+        similarities.append((word, sim.item()))
+    
+    # Sort by similarity and return top k
+    similarities.sort(key=lambda x: x[1], reverse=True)
+    return similarities[:top_k]
+
+def reconstruct_text_from_embeddings(embeddings: torch.Tensor, attention_mask: torch.Tensor,
+                                   glove_embeddings: Dict[str, torch.Tensor]) -> List[str]:
+    """Reconstruct text by finding closest words to embeddings."""
+    reconstructed_words = []
+    
+    for i in range(embeddings.size(0)):
+        if attention_mask[i]:
+            embedding = embeddings[i]
+            closest_words = find_closest_words(embedding, glove_embeddings, top_k=1)
+            if closest_words:
+                reconstructed_words.append(closest_words[0][0])  # Take the best match
+            else:
+                reconstructed_words.append("[UNK]")
+        else:
+            break  # Stop at padding
+    
+    return reconstructed_words
+
+def load_glove_subset(vocabulary: Dict[str, int], glove_path: str = "embeddings/glove.6B.300d.txt") -> Dict[str, torch.Tensor]:
+    """Load a subset of GLoVe embeddings for vocabulary words."""
+    print("🔍 Loading GLoVe subset for text reconstruction...")
+    
+    vocab_words = set(vocabulary.keys())
+    glove_embeddings = {}
+    
+    try:
+        with open(glove_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                if line_num % 100000 == 0:
+                    print(f"   Processed {line_num:,} lines, found {len(glove_embeddings)} vocab words")
+                
+                parts = line.strip().split()
+                if len(parts) == 301:  # Word + 300 dimensions
+                    word = parts[0]
+                    if word in vocab_words:
+                        try:
+                            vector = torch.tensor([float(x) for x in parts[1:]], dtype=torch.float32)
+                            glove_embeddings[word] = vector
+                        except ValueError:
+                            continue
+                        
+                        # Early exit if we found all vocab words
+                        if len(glove_embeddings) >= len(vocab_words):
+                            break
+    except FileNotFoundError:
+        print(f"⚠️  GLoVe file not found at {glove_path}, using limited reconstruction")
+        return {}
+    
+    coverage = len(glove_embeddings) / len(vocab_words) * 100
+    print(f"✅ Loaded {len(glove_embeddings)} embeddings ({coverage:.1f}% vocabulary coverage)")
+    return glove_embeddings
+
 def compare_poem_reconstruction(model: RNNAutoencoder, dataset: AutoencoderDataset, 
-                              poem_index: int, poems: List[Dict]):
+                              poem_index: int, poems: List[Dict],
+                              glove_embeddings: Optional[Dict[str, torch.Tensor]] = None):
     """Compare original poem with its reconstruction."""
     
     # Get the data sample
@@ -180,6 +246,33 @@ def compare_poem_reconstruction(model: RNNAutoencoder, dataset: AutoencoderDatas
         output = model(batch)
         reconstructed_embeddings = output['reconstructed']
         bottleneck = output['bottleneck']
+    
+    # Reconstruct text if GLoVe embeddings are available
+    if glove_embeddings:
+        print(f"\n🔄 RECONSTRUCTED TEXT:")
+        print("-" * 40)
+        
+        # Get the sequence length that matches input
+        input_length = attention_mask.squeeze(0).sum().item()
+        recon_trimmed = reconstructed_embeddings.squeeze(0)[:input_length]
+        mask_trimmed = attention_mask.squeeze(0)[:input_length]
+        
+        # Reconstruct text from embeddings
+        reconstructed_words = reconstruct_text_from_embeddings(
+            recon_trimmed, mask_trimmed, glove_embeddings
+        )
+        reconstructed_text = ' '.join(reconstructed_words)
+        print(f"{reconstructed_text}")
+        
+        # Show word-by-word comparison for first 10 words
+        original_words = original_chunk.split()[:10]
+        print(f"\n🔍 WORD-BY-WORD COMPARISON (first 10 words):")
+        print("-" * 40)
+        for i, (orig, recon) in enumerate(zip(original_words, reconstructed_words[:10])):
+            match_emoji = "✅" if orig.lower() == recon.lower() else "❌"
+            print(f"{i+1:2d}. {orig:15} → {recon:15} {match_emoji}")
+    else:
+        print(f"\n⚠️  Text reconstruction unavailable (GLoVe embeddings not loaded)")
     
     # Compute metrics
     metrics = compute_similarity_metrics(
@@ -254,12 +347,16 @@ def main():
         # Setup preprocessor with caching
         preprocessor, dataset = setup_preprocessor_with_cache()
         
+        # Load GLoVe embeddings for text reconstruction
+        vocabulary = dataset.vocabulary
+        glove_embeddings = load_glove_subset(vocabulary)
+        
         print(f"\n🔍 Ready to compare reconstructions! Dataset has {len(dataset)} chunks.")
         
         # Analyze specific poem or samples
         if args.poem_index is not None:
             # Single poem comparison
-            compare_poem_reconstruction(model, dataset, args.poem_index, poems)
+            compare_poem_reconstruction(model, dataset, args.poem_index, poems, glove_embeddings)
         else:
             # Multiple sample comparisons
             print(f"\n📋 Analyzing {args.num_samples} sample reconstructions...")
@@ -267,7 +364,7 @@ def main():
             
             total_cosine = 0
             for i, idx in enumerate(sample_indices):
-                metrics = compare_poem_reconstruction(model, dataset, idx, poems)
+                metrics = compare_poem_reconstruction(model, dataset, idx, poems, glove_embeddings)
                 total_cosine += metrics['cosine_similarity']
                 
                 if i < len(sample_indices) - 1:  # Add separator
