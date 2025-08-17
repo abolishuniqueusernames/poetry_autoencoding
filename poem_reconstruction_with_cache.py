@@ -161,7 +161,7 @@ def compare_poem_reconstruction(model: RNNAutoencoder, dataset: AutoencoderDatas
     print(f"📊 Chunk: {metadata['chunk_id'] + 1}/{metadata['total_chunks_in_poem']} (tokens {metadata['start_position']}-{metadata['end_position']})")
     
     # Extract original text chunk
-    original_text = poem_info['content']
+    original_text = poem_info['text']
     words = original_text.split()
     chunk_words = words[metadata['start_position']:metadata['end_position']]
     original_chunk = ' '.join(chunk_words)
