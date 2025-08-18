@@ -65,7 +65,8 @@ class AutoencoderDataset(Dataset):
                  split_ratios: Tuple[float, float, float] = (0.7, 0.2, 0.1),
                  seed: int = 42,
                  lazy_loading: bool = True,
-                 device: Optional[torch.device] = None):
+                 device: Optional[torch.device] = None,
+                 include_token_sequences: bool = False):
         """
         Initialize autoencoder dataset.
         
@@ -92,6 +93,7 @@ class AutoencoderDataset(Dataset):
         self.seed = seed
         self.lazy_loading = lazy_loading
         self.device = device or torch.device('cpu')
+        self.include_token_sequences = include_token_sequences
         
         # Validate split ratios
         if abs(sum(split_ratios) - 1.0) > 1e-6:
@@ -159,7 +161,7 @@ class AutoencoderDataset(Dataset):
         """Load data from provided arrays."""
         self.sequences = sequences
         self.embedding_sequences = embedding_sequences
-        self.attention_masks = attention_masks or np.ones_like(sequences)
+        self.attention_masks = attention_masks
         self.metadata = metadata or []
         self.vocabulary = vocabulary or {}
         
@@ -276,21 +278,17 @@ class AutoencoderDataset(Dataset):
         input_sequences = torch.from_numpy(embedding_seq).float()
         target_sequences = input_sequences.clone()  # Autoencoder target = input
         attention_mask = torch.from_numpy(self.attention_masks[idx]).long()
-        token_sequences = torch.from_numpy(self.sequences[idx]).long()
+        token_sequences = torch.from_numpy(self.sequences[idx]).long()  # Token indices for hybrid loss
         
-        # Move to device if specified
-        if self.device.type != 'cpu':
-            input_sequences = input_sequences.to(self.device)
-            target_sequences = target_sequences.to(self.device)
-            attention_mask = attention_mask.to(self.device)
-            token_sequences = token_sequences.to(self.device)
+        # Keep tensors on CPU for now - device transfer will happen at batch level
+        # This is a critical optimization: per-sample device transfer is extremely expensive
         
         return {
             'input_sequences': input_sequences,
             'target_sequences': target_sequences,
             'attention_mask': attention_mask,
-            'token_sequences': token_sequences,
-            'metadata': self.metadata[idx] if idx < len(self.metadata) else {}
+            'token_sequences': token_sequences,  # Token indices for hybrid loss
+            'metadata': self.metadata[idx] if isinstance(idx, int) and idx < len(self.metadata) else {}
         }
     
     def get_dataloader(self,
@@ -340,18 +338,24 @@ class AutoencoderDataset(Dataset):
         input_sequences = torch.stack([item['input_sequences'] for item in batch])
         target_sequences = torch.stack([item['target_sequences'] for item in batch])
         attention_masks = torch.stack([item['attention_mask'] for item in batch])
-        token_sequences = torch.stack([item['token_sequences'] for item in batch])
         
         # Collect metadata
         metadata = [item['metadata'] for item in batch]
         
-        return {
+        # Build return dict
+        result = {
             'input_sequences': input_sequences,
             'target_sequences': target_sequences,
             'attention_mask': attention_masks,
-            'token_sequences': token_sequences,
             'metadata': metadata
         }
+        
+        # Include token sequences if requested (needed for hybrid loss training)
+        if self.include_token_sequences:
+            token_sequences = torch.stack([item['token_sequences'] for item in batch])
+            result['token_sequences'] = token_sequences
+        
+        return result
     
     def get_sample_by_poem(self, poem_idx: int) -> List[Dict[str, torch.Tensor]]:
         """
@@ -503,12 +507,92 @@ class ChunkSequenceSampler(Sampler):
         return len(self.dataset)
 
 
+def optimized_collate_fn(batch: List[Dict[str, torch.Tensor]], device: torch.device) -> Dict[str, torch.Tensor]:
+    """
+    Optimized collate function for batch-level device transfers.
+    
+    This is a critical performance optimization: instead of moving tensors to device
+    one-by-one in __getitem__, we batch them on CPU and transfer the entire batch
+    at once, which is much more efficient.
+    
+    Args:
+        batch: List of sample dictionaries from dataset
+        device: Target device for tensors
+        
+    Returns:
+        Batched tensors on target device
+    """
+    # Stack tensors from all samples (on CPU)
+    batched = {}
+    
+    # Get tensor keys from first sample
+    tensor_keys = ['input_sequences', 'target_sequences', 'attention_mask', 'token_sequences']
+    
+    for key in tensor_keys:
+        if key in batch[0]:
+            # Stack all samples for this key
+            stacked = torch.stack([sample[key] for sample in batch])
+            
+            # Single batch transfer to device (much faster than per-sample)
+            batched[key] = stacked.to(device, non_blocking=True)
+    
+    # Handle metadata (keep on CPU)
+    if 'metadata' in batch[0]:
+        batched['metadata'] = [sample['metadata'] for sample in batch]
+    
+    return batched
+
+
+def create_optimized_dataloader(
+    dataset: AutoencoderDataset,
+    batch_size: int,
+    device: torch.device,
+    shuffle: bool = True,
+    num_workers: int = 4,
+    pin_memory: bool = None,
+    **kwargs
+) -> DataLoader:
+    """
+    Create an optimized DataLoader with efficient device transfers.
+    
+    Args:
+        dataset: AutoencoderDataset instance
+        batch_size: Batch size
+        device: Target device
+        shuffle: Whether to shuffle data
+        num_workers: Number of parallel workers
+        pin_memory: Enable pin memory (auto-detect if None)
+        **kwargs: Additional DataLoader arguments
+        
+    Returns:
+        Optimized DataLoader instance
+    """
+    # Auto-detect pin_memory if not specified
+    if pin_memory is None:
+        pin_memory = device.type == 'cuda'
+    
+    # Create collate function with device binding
+    collate_fn = lambda batch: optimized_collate_fn(batch, device)
+    
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        collate_fn=collate_fn,
+        drop_last=True,  # Consistent batch sizes for better performance
+        **kwargs
+    )
+
+
 def create_poetry_datasets(artifacts_path: Union[str, Path],
                           timestamp: str = "latest",
                           split_ratios: Tuple[float, float, float] = (0.7, 0.2, 0.1),
                           seed: int = 42,
                           lazy_loading: bool = True,
-                          device: Optional[torch.device] = None) -> Tuple[AutoencoderDataset, AutoencoderDataset, AutoencoderDataset]:
+                          device: Optional[torch.device] = None,
+                          include_token_sequences: bool = False) -> Tuple[AutoencoderDataset, AutoencoderDataset, AutoencoderDataset]:
     """
     Create train, validation, and test datasets from preprocessing artifacts.
     
@@ -519,6 +603,7 @@ def create_poetry_datasets(artifacts_path: Union[str, Path],
         seed: Random seed for reproducible splits
         lazy_loading: Whether to use lazy loading for embeddings
         device: PyTorch device for tensors
+        include_token_sequences: Whether to include token sequences in batches (needed for hybrid loss)
         
     Returns:
         Tuple of (train_dataset, val_dataset, test_dataset)
@@ -533,7 +618,8 @@ def create_poetry_datasets(artifacts_path: Union[str, Path],
         split_ratios=split_ratios,
         seed=seed,
         lazy_loading=lazy_loading,
-        device=device
+        device=device,
+        include_token_sequences=include_token_sequences
     )
     
     val_dataset = AutoencoderDataset(
@@ -543,7 +629,8 @@ def create_poetry_datasets(artifacts_path: Union[str, Path],
         split_ratios=split_ratios,
         seed=seed,
         lazy_loading=lazy_loading,
-        device=device
+        device=device,
+        include_token_sequences=include_token_sequences
     )
     
     test_dataset = AutoencoderDataset(
@@ -553,7 +640,8 @@ def create_poetry_datasets(artifacts_path: Union[str, Path],
         split_ratios=split_ratios,
         seed=seed,
         lazy_loading=lazy_loading,
-        device=device
+        device=device,
+        include_token_sequences=include_token_sequences
     )
     
     logger.info(f"Created datasets: train={len(train_dataset)}, val={len(val_dataset)}, test={len(test_dataset)}")

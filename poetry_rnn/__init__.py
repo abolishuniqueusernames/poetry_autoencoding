@@ -61,8 +61,13 @@ from .pipeline import PoetryPreprocessor
 from .dataset import AutoencoderDataset, create_poetry_datasets, create_poetry_dataloaders
 from .config import Config
 
-# New High-Level API
-from .api import poetry_autoencoder, RNN
+# Enhanced High-Level API - Beautiful Interface
+from .api import (
+    poetry_autoencoder, RNN,                          # Backward compatible API
+    PoetryAutoencoder, train_hybrid_loss,             # Enhanced interface
+    design_autoencoder, curriculum_learning, fetch_data,  # Target API components
+    smart_autoencoder, curriculum_genius              # Intelligent configuration
+)
 
 # Core component imports
 from .tokenization.poetry_tokenizer import PoetryTokenizer
@@ -87,9 +92,19 @@ __all__ = [
     "__version__",
     "__author__",
     
-    # High-level API (New - Recommended)
-    "poetry_autoencoder",
-    "RNN",
+    # High-level API (Enhanced - Recommended)
+    "poetry_autoencoder",        # One-line training function
+    "PoetryAutoencoder",         # Beautiful class interface  
+    "RNN",                       # Original RNN class
+    
+    # Target API Design (TODO.md)
+    "design_autoencoder",        # design = design_autoencoder(...)
+    "curriculum_learning",       # curriculum = curriculum_learning(...)
+    "fetch_data",               # data = fetch_data(...)
+    
+    # Intelligent Configuration
+    "smart_autoencoder",        # AI-driven architecture selection
+    "curriculum_genius",        # Intelligent curriculum design
     
     # High-level API (Legacy - Still Supported)
     "PoetryPreprocessor",
